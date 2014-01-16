@@ -3,13 +3,14 @@ import os
 import hashlib
 from PIL import Image
 
+
 class Robohash(object):
     """
     Robohash is a quick way of generating unique avatars for a site.
     The original use-case was to create somewhat memorable images to represent a RSA key.
     """
 
-    def __init__(self,string,hashcount=11,ignoreext = True):
+    def __init__(self, string, hashcount=11, ignoreext=True):
         """
         Creates our Robohasher
         Takes in the string to make a Robohash out of.
@@ -32,7 +33,7 @@ class Robohash(object):
         #3 = BG
         self.iter = 4
         self._create_hashes(hashcount)
-        
+
         self.resourcedir = os.path.dirname(__file__) + '/'
         # Get the list of backgrounds and RobotSets
         self.sets = self._listdirs(self.resourcedir + 'sets')
@@ -42,7 +43,7 @@ class Robohash(object):
         self.colors = self._listdirs(self.resourcedir + 'sets/set1')
         self.format = 'png'
 
-    def _remove_exts(self,string):
+    def _remove_exts(self, string):
         """
         Sets the string, to create the Robohash
         """
@@ -51,31 +52,31 @@ class Robohash(object):
         # We'll remove them from the string before hashing.
         # This ensures that /Bear.png and /Bear.bmp will send back the same image, in different formats.
 
-        if string.lower().endswith(('.png','.gif','.jpg','.bmp','.jpeg','.ppm','.datauri')):
-            format = string[string.rfind('.') +1 :len(string)] 
+        if string.lower().endswith(('.png', '.gif', '.jpg', '.bmp', '.jpeg', '.ppm', '.datauri')):
+            format = string[string.rfind('.') + 1:len(string)]
             if format.lower() == 'jpg':
-                    format = 'jpeg' 
-            self.format = format  
-            string = string[0:string.rfind('.')] 
-        return string        
+                format = 'jpeg'
+            self.format = format
+            string = string[0:string.rfind('.')]
+        return string
 
 
-    def _create_hashes(self,count):
+    def _create_hashes(self, count):
         """
         Breaks up our hash into slots, so we can pull them out later.
         Essentially, it splits our SHA/MD5/etc into X parts.
         """
-        for i in range(0,count):
-             #Get 1/numblocks of the hash
-             blocksize = int(len(self.hexdigest) / count)
-             currentstart = (1 + i) * blocksize - blocksize
-             currentend = (1 +i) * blocksize
-             self.hasharray.append(int(self.hexdigest[currentstart:currentend],16))            
+        for i in range(0, count):
+            #Get 1/numblocks of the hash
+            blocksize = int(len(self.hexdigest) / count)
+            currentstart = (1 + i) * blocksize - blocksize
+            currentend = (1 + i) * blocksize
+            self.hasharray.append(int(self.hexdigest[currentstart:currentend], 16))
 
-    def _listdirs(self,path):
+    def _listdirs(self, path):
         return [d for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
 
-    def _get_list_of_files(self,path):
+    def _get_list_of_files(self, path):
         """
         Go through each subdirectory of `path`, and choose one file from each to use in our hash.
         Continue to increase self.iter, so we use a different 'slot' of randomness each time.
@@ -94,7 +95,7 @@ class Robohash(object):
         for directory in directories:
             files_in_dir = []
             for imagefile in os.listdir(directory):
-                files_in_dir.append(os.path.join(directory,imagefile))
+                files_in_dir.append(os.path.join(directory, imagefile))
 
             # Use some of our hash bits to choose which file
             element_in_list = self.hasharray[self.iter] % len(files_in_dir)
@@ -103,7 +104,7 @@ class Robohash(object):
 
         return chosen_files
 
-    def assemble(self,roboset=None,color=None,format=None,bgset=None,sizex=300,sizey=300):
+    def assemble(self, roboset=None, color=None, format=None, bgset=None, sizex=300, sizey=300):
         """
         Build our Robot!
         Returns the robot image itself.
@@ -114,7 +115,7 @@ class Robohash(object):
         # If they don't set one, take the first entry from sets above.
 
         if roboset == 'any':
-            roboset = self.sets[self.hasharray[1] % len(self.sets) ]
+            roboset = self.sets[self.hasharray[1] % len(self.sets)]
         elif roboset in self.sets:
             roboset = roboset
         else:
@@ -129,16 +130,16 @@ class Robohash(object):
             if color in self.colors:
                 roboset = 'set1/' + color
             else:
-                randomcolor = self.colors[self.hasharray[0] % len(self.colors) ]
+                randomcolor = self.colors[self.hasharray[0] % len(self.colors)]
                 roboset = 'set1/' + randomcolor
 
         # If they specified a background, ensure it's legal, then give it to them.
         if bgset in self.bgsets:
             bgset = bgset
         elif bgset == 'any':
-            bgset = self.bgsets[ self.hasharray[2] % len(self.bgsets) ]                                                                                                
+            bgset = self.bgsets[self.hasharray[2] % len(self.bgsets)]
 
-        # If we set a format based on extension earlier, use that. Otherwise, PNG.
+            # If we set a format based on extension earlier, use that. Otherwise, PNG.
         if format is None:
             format = self.format
 
@@ -157,34 +158,34 @@ class Robohash(object):
         roboparts.sort(key=lambda x: x.split("#")[1])
 
         if bgset is not None:
-                bglist = []
-                backgrounds = os.listdir(self.resourcedir + 'backgrounds/' + bgset)
-                backgrounds.sort()
-                for ls in backgrounds:
-                        if not ls.startswith("."):
-                                bglist.append(self.resourcedir + 'backgrounds/' + bgset + "/" + ls)
-                background = bglist[self.hasharray[3] % len(bglist)]
-    
+            bglist = []
+            backgrounds = os.listdir(self.resourcedir + 'backgrounds/' + bgset)
+            backgrounds.sort()
+            for ls in backgrounds:
+                if not ls.startswith("."):
+                    bglist.append(self.resourcedir + 'backgrounds/' + bgset + "/" + ls)
+            background = bglist[self.hasharray[3] % len(bglist)]
+
         # Paste in each piece of the Robot.
         roboimg = Image.open(roboparts[0])
-        roboimg = roboimg.resize((1024,1024))
+        roboimg = roboimg.resize((1024, 1024))
         for png in roboparts:
-                img = Image.open(png) 
-                img = img.resize((1024,1024))
-                roboimg.paste(img,(0,0),img)
+            img = Image.open(png)
+            img = img.resize((1024, 1024))
+            roboimg.paste(img, (0, 0), img)
 
         # If we're a BMP, flatten the image.
         if format == 'bmp':
-                #Flatten bmps
-                r, g, b, a = roboimg.split()
-                roboimg = Image.merge("RGB", (r, g, b))
-    
+            #Flatten bmps
+            r, g, b, a = roboimg.split()
+            roboimg = Image.merge("RGB", (r, g, b))
+
         if bgset is not None:
-                bg = Image.open(background)
-                bg = bg.resize((1024,1024))
-                bg.paste(roboimg,(0,0),roboimg)
-                roboimg = bg               
-                                             
-        self.img = roboimg.resize((sizex,sizey),Image.ANTIALIAS) 
+            bg = Image.open(background)
+            bg = bg.resize((1024, 1024))
+            bg.paste(roboimg, (0, 0), roboimg)
+            roboimg = bg
+
+        self.img = roboimg.resize((sizex, sizey), Image.ANTIALIAS)
         self.format = format
 
