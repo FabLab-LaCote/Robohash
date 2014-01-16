@@ -4,6 +4,7 @@
 # Find details about this project at https://github.com/e1ven/robohash
 
 from __future__ import unicode_literals
+import logging
 import tornado.httpserver
 import tornado.ioloop
 import tornado.options
@@ -32,7 +33,6 @@ except ImportError:
     urlencode = urllib.urlencode
 
 from tornado.options import define, options
-import io
 
 define("port", default=80, help="run on the given port", type=int)
 
@@ -221,8 +221,6 @@ class ImgHandler(tornado.web.RequestHandler):
     """
 
     def get(self, string=None):
-
-
         # Set default values
         sizex = 300
         sizey = 300
@@ -238,30 +236,26 @@ class ImgHandler(tornado.web.RequestHandler):
         # We'll translate /abc.png/s_100x100/set_any to be /abc.png?set=any&s=100x100
         # We're using underscore as a replacement for = and / as a replacement for [&?]
 
-        args = self.request.arguments.copy()
+        args = {}
 
-        for k in list(args.keys()):
-            v = args[k]
-            if type(v) is list:
-                if len(v) > 0:
-                    args[k] = args[k][0]
-                else:
-                    args[k] = ""
+        for k in list(self.request.arguments.keys()):
+            args[k] = self.get_argument(k)
 
-        # Detect if they're using the above slash-separated parameters.. 
+        # Detect if they're using the above slash-separated parameters..
         # If they are, then remove those parameters from the query string.
         # If not, don't remove anything.
-        split = string.split('/')
-        if len(split) > 1:
-            for st in split:
-                b = st.split('_')
-                if len(b) == 2:
-                    if b[0] in ['gravatar', 'ignoreext', 'size', 'set', 'bgset', 'color']:
-                        args[b[0]] = b[1]
-                        string = re.sub("/" + st, '', string)
 
-        # Ensure we have something to hash!
-        if string is None:
+        if string is not None:
+            split = string.split('/')
+            if len(split) > 1:
+                for st in split:
+                    b = st.split('_')
+                    if len(b) == 2:
+                        if b[0] in ['gravatar', 'ignoreext', 'size', 'set', 'bgset', 'color']:
+                            args[b[0]] = b[1]
+                            string = re.sub("/" + st, '', string)
+        else:
+            # Ensure we have something to hash!
             string = self.request.remote_ip
 
 
@@ -379,10 +373,8 @@ def main():
     }
 
     application = tornado.web.Application([
-                (r'/(crossdomain\.xml)', tornado.web.StaticFileHandler, {"path": os.path.join(os.path.dirname(__file__),
-                "static/")}),
-                (r"/static/(.*)", tornado.web.StaticFileHandler, {"path": os.path.join(os.path.dirname(__file__),
-                "static/")}),
+                (r'/(crossdomain\.xml)', tornado.web.StaticFileHandler, {"path": settings['static_path']}),
+                (r"/static/(.*)", tornado.web.StaticFileHandler, {"path":settings['static_path']}),
                 (r"/", MainHandler),
                 (r"/(.*)", ImgHandler),
         ], **settings)
@@ -390,7 +382,7 @@ def main():
     http_server = tornado.httpserver.HTTPServer(application, xheaders=True)
     http_server.listen(options.port)
 
-    print("The Oven is warmed up - Time to make some Robots! Listening on port: " + str(options.port))
+    logging.info("The Oven is warmed up - Time to make some Robots! Listening on port: " + str(options.port))
     tornado.ioloop.IOLoop.instance().start()
 
 
