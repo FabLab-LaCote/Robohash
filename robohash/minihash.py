@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.3
 
+import asyncio
 import os
 import struct
 import hashlib
@@ -15,6 +16,7 @@ import tornado.ioloop
 import tornado.web
 import tornado.log
 import tornado.options
+from tornado.platform.asyncio import AsyncIOMainLoop
 
 from PIL import Image
 
@@ -24,12 +26,12 @@ PUBLIC_SEED = b''
 
 
 def simple_prng(input: 'str or bytes', seed:'str or bytes'=PUBLIC_SEED):
-    """Simple deterministic random number generator for expanding seed. Not for general purpose use.
-        Yields 64 bit unsigned integers. Seed is optional and can help against chosen input attacks."""
+    """Simple deterministic random number generator for expanding input. Not for general purpose use.
+        Yields 64bit unsigned ints. Seed is optional and can help against chosen input attacks."""
     input, seed = [s.encode('utf-8') if isinstance(s, str) else s for s in (input, seed)]
     pool = hmac.new(seed, input, hashlib.sha512).digest()
     for i in itertools.count():
-        for value in struct.unpack("<QQQQQQQQ", pool):
+        for value in struct.unpack(">QQQQQQQQ", pool):
             yield value
         pool = hmac.new(seed, pool, hashlib.sha512).digest()
 
@@ -49,6 +51,8 @@ class RoboPartsSet(object):
                 choice_group = os.path.relpath(root, start=self.set_dir)
                 self.choices.append((choice_group, imgs))
                 self.choice_bits += math.log(len(imgs), 2)
+
+        self.choices.sort(key=lambda x: x[0].split("#")[1])
         if self.choice_bits < 12:
             raise Exception("Insufficent robot parts for set. %s has %0.1f bits" % (name, self.choice_bits))
 
@@ -105,7 +109,6 @@ class RobotHashBuilder(object):
 
         prng = simple_prng(input, seed=seed)
         files, tag_key = robo_set.pick_files(prng)
-        files.sort(key=lambda x: x.split("#")[1])
 
         # build hash of decision tree:
         #htag_input = "%s:%s" % (set_name, tag_key())
@@ -156,6 +159,7 @@ class RawHashHandler(tornado.web.RequestHandler):
 
 
 if __name__ == "__main__":
+    AsyncIOMainLoop().install()
     tornado.log.enable_pretty_logging()
 
     robot_builder = RobotHashBuilder()
@@ -165,5 +169,5 @@ if __name__ == "__main__":
     ])
     application.listen(8888)
     logging.info("Starting server.")
-    tornado.ioloop.IOLoop.instance().start()
+    asyncio.get_event_loop().run_forever()
 

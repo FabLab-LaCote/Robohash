@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+<script src="sjcl.js"></script>
+<script src="rh.js"></script>
+<script src="rh_data.js"></script>
+</head>
+<body>
+<h1>Proof of concept, RoboHash in JS</h1>
+<canvas id="rhc" width="300" height="300"></canvas>
+<script>
+    var args = {};
+    window.location.search.substring(1).split('&').forEach(function(param){
+        var pair = param.split("=");
+        args[pair[0]] = pair[1];
+    });
+
+
+    var baseUrl = "sets/set1/",
+        prng = new SimplePRNG(args['in']||'',args['seed']||''),
+        files = pickParts(prng);
+    loadPartFiles(files, assembleParts);
+</script>
+</body>
+</html>
