@@ -22,6 +22,8 @@
     }
     #roboimg{
       align-self: center;
+      width: 500px;
+      height: 500px;
     }
    </style>
 </head>
@@ -41,14 +43,16 @@
     ws.onmessage = function(ev){
       $message.attr("class", 'label label-info');
       $message.hide();
-      $message.fadeIn("slow");
       $message.text('recieved message');
+      $message.fadeIn("slow");
+      $img.hide();
       var json = JSON.parse(ev.data);
       var url = '/' + json.id + '?size=500x500';
       if(json.a==="1"){
         url += '&set=set2';
       }
    	  $img.attr('src', url);
+      $img.fadeIn("slow");
     };
     ws.onclose = function(ev){
       $message.attr("class", 'label label-important');
