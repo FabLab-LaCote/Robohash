@@ -9,6 +9,9 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.options
 import tornado.web
+import tornado.websocket
+import json
+from time import localtime, strftime
 import socket
 import os
 import hashlib
@@ -359,6 +362,34 @@ class ImgHandler(tornado.web.RequestHandler):
             self.write("data:image/png;base64," + str(b64ver))
 
 
+cl = []
+
+class LogbookHandler(tornado.web.RequestHandler):
+    @tornado.web.asynchronous
+    def get(self, *args):
+        self.finish()
+        id = self.get_argument("id")
+        a = self.get_argument("a")
+        b = self.get_argument("b")
+        data = {"id": id, "a" : a, "b": b}
+        with open('usage.log', 'a') as f:
+            f.write(strftime("%Y-%m-%d %H:%M:%S", localtime()) + ',' + id + ',' + a + ',' + b + '\n')
+        data = json.dumps(data)
+        for c in cl:
+            c.write_message(data)
+
+class SocketHandler(tornado.websocket.WebSocketHandler):
+    def check_origin(self, origin):
+        return True
+
+    def open(self):
+        if self not in cl:
+            cl.append(self)
+
+    def on_close(self):
+        if self in cl:
+            cl.remove(self)
+
 def main():
     tornado.options.parse_command_line()
     # timeout in seconds
@@ -376,6 +407,8 @@ def main():
                 (r'/(crossdomain\.xml)', tornado.web.StaticFileHandler, {"path": settings['static_path']}),
                 (r"/static/(.*)", tornado.web.StaticFileHandler, {"path":settings['static_path']}),
                 (r"/", MainHandler),
+                (r'/logbook', LogbookHandler),
+                (r'/ws', SocketHandler),
                 (r"/(.*)", ImgHandler),
         ], **settings)
 
